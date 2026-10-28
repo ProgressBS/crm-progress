@@ -1,2 +1,2 @@
-import ClientsTable from '@/components/ClientsTable'
-export default function ClientsPage() { return <ClientsTable /> }
+import CrudView from '@/components/CrudView'
+export default function Page() { return <CrudView entity="clients" /> }

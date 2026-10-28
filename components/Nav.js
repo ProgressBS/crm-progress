@@ -3,7 +3,25 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 
-const items = [['/', 'Дашборд'], ['/deals', 'Сделки'], ['/clients', 'Клиенты'], ['/courses', 'Курсы']]
+const ITEMS = [
+  ['/', 'Дашборд'],
+  ['/feed', 'Заявки и чаты'],
+  ['/deals', 'Сделки'],
+  ['/clients', 'Клиенты'],
+  ['sep', 'Обучение'],
+  ['/schedule', 'Расписание'],
+  ['/courses', 'Курсы'],
+  ['/listeners', 'Слушатели'],
+  ['/teachers', 'Преподаватели'],
+  ['/certificates', 'Сертификаты'],
+  ['sep', 'Продажи'],
+  ['/tasks', 'Задачи'],
+  ['/kps', 'КП'],
+  ['/contracts', 'Договоры'],
+  ['/payments', 'Оплаты'],
+  ['/tenders', 'Тендеры'],
+  ['/reports', 'Отчёты'],
+]
 
 export default function Nav({ name }) {
   const path = usePathname()
@@ -16,9 +34,9 @@ export default function Nav({ name }) {
         <div className="logo">П</div>
         <div><b>Прогресс</b><span>CRM школы</span></div>
       </div>
-      {items.map(([href, label]) => (
-        <Link key={href} href={href} className={'navlink' + (path === href ? ' active' : '')}>{label}</Link>
-      ))}
+      {ITEMS.map(([href, label], i) => href === 'sep'
+        ? <div key={'s' + i} className="navsep">{label}</div>
+        : <Link key={href} href={href} className={'navlink' + (path === href ? ' active' : '')}>{label}</Link>)}
       <div style={{ marginTop: 'auto', paddingTop: 12 }}>
         <div style={{ fontSize: 12, color: 'var(--faint)', padding: '0 11px 8px', overflow: 'hidden', textOverflow: 'ellipsis' }}>{name}</div>
         <button className="btn sm" style={{ width: '100%', justifyContent: 'center' }} onClick={signOut}>Выйти</button>
