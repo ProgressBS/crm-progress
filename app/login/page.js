@@ -20,8 +20,13 @@ export default function LoginPage() {
         const { error } = await supabase.auth.signInWithPassword({ email, password })
         if (error) throw error
       } else {
-        const { error } = await supabase.auth.signUp({ email, password, options: { data: { full_name: name } } })
+        const { data, error } = await supabase.auth.signUp({ email, password, options: { data: { full_name: name } } })
         if (error) throw error
+        // если сессии нет (включено подтверждение почты) — пробуем войти сразу
+        if (!data.session) {
+          const { error: e3 } = await supabase.auth.signInWithPassword({ email, password })
+          if (e3) { setErr('Аккаунт создан. Войдите кнопкой «Войти».'); setMode('in'); setBusy(false); return }
+        }
       }
       router.push('/'); router.refresh()
     } catch (e2) { setErr(e2.message || 'Ошибка входа') } finally { setBusy(false) }
