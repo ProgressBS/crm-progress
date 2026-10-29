@@ -13,6 +13,7 @@ const ITEMS = [
   ['/courses', 'Курсы'],
   ['/listeners', 'Слушатели'],
   ['/teachers', 'Преподаватели'],
+  ['/candidates', 'Кандидаты'],
   ['/certificates', 'Сертификаты'],
   ['sep', 'Продажи'],
   ['/tasks', 'Задачи'],
@@ -21,6 +22,8 @@ const ITEMS = [
   ['/payments', 'Оплаты'],
   ['/tenders', 'Тендеры'],
   ['/reports', 'Отчёты'],
+  ['sep', 'Документы'],
+  ['/letters', 'Письма'],
 ]
 
 export default function Nav({ name }) {

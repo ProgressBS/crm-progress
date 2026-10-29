@@ -2,3 +2,9 @@ node_modules
 .next
 .env*.local
 .DS_Store
+
+# import scratch (contains personal data — never commit to this repo)
+data/
+csv/
+sqlgen/
+gencsv.js
