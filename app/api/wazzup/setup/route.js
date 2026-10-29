@@ -12,17 +12,21 @@ export async function GET() {
     })
   }
 
-  const hook = await wz('/webhooks', 'PATCH', {
-    webhooksUri: APP_URL + '/api/wazzup',
-    subscriptions: { messagesAndStatuses: true, contactsAndDealsCreation: false },
-  })
+  try {
+    const hook = await wz('/webhooks', 'PATCH', {
+      webhooksUri: APP_URL + '/api/wazzup',
+      subscriptions: { messagesAndStatuses: true, contactsAndDealsCreation: false },
+    })
 
-  const channels = await wz('/channels')
+    const channels = await wz('/channels')
 
-  return Response.json({
-    ok: hook.ok,
-    webhookUrl: APP_URL + '/api/wazzup',
-    webhook: hook,
-    channels: channels.data,
-  })
+    return Response.json({
+      ok: hook.ok,
+      webhookUrl: APP_URL + '/api/wazzup',
+      webhook: hook,
+      channels: channels.data,
+    })
+  } catch (e) {
+    return Response.json({ ok: false, error: String(e && e.message || e) }, { status: 200 })
+  }
 }
