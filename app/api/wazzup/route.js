@@ -18,6 +18,7 @@ export async function POST(req) {
   const sb = admin()
   const messages = Array.isArray(body?.messages) ? body.messages : []
   const statuses = Array.isArray(body?.statuses) ? body.statuses : []
+  const debug = []
 
   for (const m of messages) {
     if (!m || !m.messageId) continue
@@ -50,8 +51,9 @@ export async function POST(req) {
     if (client_id) row.client_id = client_id
 
     try {
-      await sb.from('messages').upsert(row, { onConflict: 'wazzup_id' })
-    } catch (e) {}
+      const { error } = await sb.from('messages').upsert(row, { onConflict: 'wazzup_id' })
+      if (error) debug.push(error.message)
+    } catch (e) { debug.push(String(e && e.message || e)) }
   }
 
   // delivery/read status updates
@@ -62,5 +64,5 @@ export async function POST(req) {
     } catch (e) {}
   }
 
-  return Response.json({ ok: true })
+  return Response.json({ ok: true, inserted: messages.length - debug.length, errors: debug })
 }
