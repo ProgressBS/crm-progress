@@ -7,7 +7,7 @@ import { money, num, fdate } from '@/lib/format'
 const SOURCES = ['Звонок', 'WhatsApp', 'Сайт', 'Рекомендация', 'Тендер', 'Рассылка', 'Instagram', 'Другое']
 const ENT = ['ТОО «ПРОГРЕСС&CO»', 'ИП PROGRESS BUSINESS SCHOOL']
 const today = () => new Date().toISOString().slice(0, 10)
-const digits = s => String(s || '').replace(/\D/g, '')
+const digits = s => { let d = String(s || '').replace(/\D/g, ''); if (d.length === 11 && d[0] === '8') d = '7' + d.slice(1); if (d.length === 10) d = '7' + d; return d }
 
 export default function DealsBoard() {
   const supabase = createClient()

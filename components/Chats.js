@@ -19,6 +19,9 @@ function ftime(ts) {
 }
 const isUrl = s => typeof s === 'string' && /^https?:\/\//.test(s)
 const fmtNum = p => { const d = String(p || '').replace(/\D/g, ''); return d ? '+' + d : (p || '') }
+// normalize any phone/chat id to the WhatsApp chat id form (digits, KZ 8->7)
+const normId = s => { let d = String(s || '').replace(/\D/g, ''); if (d.length === 11 && d[0] === '8') d = '7' + d.slice(1); if (d.length === 10) d = '7' + d; return d }
+const sameChat = (a, b) => { const x = normId(a), y = normId(b); return !!x && x === y }
 const NUM_COLORS = ['#1f9d57', '#2f6fd0', '#c97a12', '#8b5cf6']
 
 export default function Chats() {
@@ -60,7 +63,7 @@ export default function Chats() {
     fetch('/api/wazzup/channels').then(r => r.json()).then(j => setChannels(j.channels || [])).catch(() => {})
     try {
       const want = new URLSearchParams(window.location.search).get('chat')
-      if (want) setSel(want)
+      if (want) setSel(normId(want))
     } catch (e) {}
     const i = setInterval(load, 12000)
     return () => clearInterval(i)
@@ -91,11 +94,11 @@ export default function Chats() {
   const cur = Object.values(convMap).map(c => {
     const last = c.items[c.items.length - 1]
     return { ...c, name: c.name || fmtNum(c.chat_id), last, lastTs: last?.ts }
-  }).find(c => c.chat_id === sel) || null
-  const curTasks = tasks.filter(t => t.chat_id === sel)
-  const deal = deals.find(d => d.chat_id === sel) || null
-  const curContracts = contracts.filter(x => x.chat_id === sel)
-  const curPayments = payments.filter(x => x.chat_id === sel)
+  }).find(c => c.chat_id === sel || sameChat(c.chat_id, sel)) || null
+  const curTasks = tasks.filter(t => sameChat(t.chat_id, sel))
+  const deal = deals.find(d => sameChat(d.chat_id, sel)) || null
+  const curContracts = contracts.filter(x => sameChat(x.chat_id, sel))
+  const curPayments = payments.filter(x => sameChat(x.chat_id, sel))
   const freeDeals = deals.filter(d => !d.chat_id)
 
   useEffect(() => {
