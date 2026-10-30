@@ -56,8 +56,7 @@ export async function POST(req) {
     })
   }
 
-  let result = { skipped: true }
-  if (rows.length) result = await insertMessages(rows)
+  if (rows.length) await insertMessages(rows)
 
-  return Response.json({ ok: true, result })
+  return Response.json({ ok: true })
 }
