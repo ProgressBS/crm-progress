@@ -9,15 +9,14 @@ async function insertMessages(rows) {
   const ctrl = new AbortController()
   const t = setTimeout(() => ctrl.abort(), 7000)
   try {
-    const res = await fetch(SB_URL + '/rest/v1/messages', {
+    const res = await fetch(SB_URL + '/rest/v1/rpc/ingest_messages', {
       method: 'POST',
       headers: {
         apikey: SB_KEY,
         Authorization: 'Bearer ' + SB_KEY,
         'Content-Type': 'application/json',
-        Prefer: 'resolution=merge-duplicates,return=minimal',
       },
-      body: JSON.stringify(rows),
+      body: JSON.stringify({ rows }),
       signal: ctrl.signal,
       cache: 'no-store',
     })
