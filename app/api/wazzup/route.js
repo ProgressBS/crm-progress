@@ -20,25 +20,10 @@ export async function POST(req) {
   const statuses = Array.isArray(body?.statuses) ? body.statuses : []
   const debug = []
 
+  const rows = []
   for (const m of messages) {
     if (!m || !m.messageId) continue
-    const digits = String(m.chatId || '').replace(/\D/g, '')
-    const tail = digits.slice(-9)
-
-    // try to match an existing client by phone / whatsapp number
-    let client_id = null
-    if (tail) {
-      try {
-        const { data: c } = await sb
-          .from('clients')
-          .select('id')
-          .or(`phone.ilike.%${tail}%,whatsapp.ilike.%${tail}%`)
-          .limit(1)
-        if (c && c[0]) client_id = c[0].id
-      } catch (e) {}
-    }
-
-    const row = {
+    rows.push({
       wazzup_id: m.messageId,
       channel: m.channelId || null,
       chat_id: m.chatId || null,
@@ -47,11 +32,13 @@ export async function POST(req) {
       text: m.text || m.contentUri || '[вложение]',
       status: m.status || null,
       ts: m.dateTime || new Date().toISOString(),
-    }
-    if (client_id) row.client_id = client_id
-
+    })
+  }
+  // (client matching by phone is done later / by a DB trigger — kept out of the
+  // hot path so the webhook responds fast)
+  if (rows.length) {
     try {
-      const { error } = await sb.from('messages').upsert(row, { onConflict: 'wazzup_id' })
+      const { error } = await sb.from('messages').upsert(rows, { onConflict: 'wazzup_id' })
       if (error) debug.push(error.message)
     } catch (e) { debug.push(String(e && e.message || e)) }
   }
@@ -64,5 +51,5 @@ export async function POST(req) {
     } catch (e) {}
   }
 
-  return Response.json({ ok: true, inserted: messages.length - debug.length, errors: debug })
+  return Response.json({ ok: true, inserted: debug.length ? 0 : rows.length, errors: debug })
 }
