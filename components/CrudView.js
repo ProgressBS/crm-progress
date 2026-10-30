@@ -78,6 +78,7 @@ export default function CrudView({ entity }) {
 
 function cell(r, c) {
   const v = r[c.key]
+  if (c.link) { const href = c.link(r); return href ? <a className="btn sm" href={href} onClick={e => e.stopPropagation()}>{c.linkLabel || 'Открыть'}</a> : <span style={{ color: 'var(--faint)' }}>—</span> }
   if (c.money) return v ? money(v) : '—'
   if (c.date) return fdate(v)
   if (c.chip) return <span className={'chip ' + (c.chipColor ? c.chipColor(v) : '')}>{c.chip(v)}</span>

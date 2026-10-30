@@ -169,6 +169,7 @@ function DealDetail({ deal, me, acts, tasks, docs, onClose, reload, move, archiv
             <button className="btn sm" onClick={addKp}>+ КП</button>
             <button className="btn sm" onClick={addContract}>+ Договор</button>
             <button className="btn sm" onClick={addPayment}>+ Оплата</button>
+            {deal.chat_id && <a className="btn sm" style={{ background: 'var(--s1)', color: '#fff', borderColor: 'transparent' }} href={'/feed?chat=' + encodeURIComponent(deal.chat_id)}>💬 Переписка</a>}
             <button className="btn sm" style={{ marginLeft: 'auto', borderColor: 'var(--bad)', color: 'var(--bad)' }} onClick={() => archive(deal)}>В архив</button>
           </div>
           <div className="detail-sec"><h4>Стадия</h4>
