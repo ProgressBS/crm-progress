@@ -88,7 +88,9 @@ export default function DealsBoard() {
 function DealForm({ me, onClose, onSaved, deal }) {
   const supabase = createClient()
   const [v, setV] = useState(deal || { responsible: me })
+  const [courses, setCourses] = useState([])
   const set = (k, x) => setV(p => ({ ...p, [k]: x }))
+  useEffect(() => { supabase.from('courses').select('name').order('name').then(({ data }) => setCourses((data || []).map(c => c.name).filter(Boolean))) }, [])
   async function submit(e) {
     e.preventDefault(); if (!v.client_name) return
     const phone = v.phone ? String(v.phone).trim() : null
@@ -109,7 +111,10 @@ function DealForm({ me, onClose, onSaved, deal }) {
         <div className="mb"><div className="form-grid">
           <div className="field full"><label>Клиент *</label><input value={v.client_name || ''} onChange={e => set('client_name', e.target.value)} /></div>
           <div className="field full"><label>Номер WhatsApp / телефон <span style={{ color: 'var(--faint)', fontWeight: 400 }}>— свяжет переписку, договор и оплату</span></label><input placeholder="+7 7__ ___ __ __" value={v.phone || ''} onChange={e => set('phone', e.target.value)} /></div>
-          <div className="field full"><label>Курс</label><input value={v.course_name || ''} onChange={e => set('course_name', e.target.value)} /></div>
+          <div className="field full"><label>Курс <span style={{ color: 'var(--faint)', fontWeight: 400 }}>— выберите из списка или впишите свой</span></label>
+            <input list="deal-courses" placeholder="Начните вводить название курса…" value={v.course_name || ''} onChange={e => set('course_name', e.target.value)} />
+            <datalist id="deal-courses">{courses.map(c => <option key={c} value={c} />)}</datalist>
+          </div>
           <div className="field"><label>Кол-во слушателей</label><input type="number" value={v.listeners || ''} onChange={e => set('listeners', e.target.value)} /></div>
           <div className="field"><label>Сумма (без НДС)</label><input type="number" value={v.amount || ''} onChange={e => set('amount', e.target.value)} /></div>
           <div className="field"><label>Источник</label><select value={v.source || ''} onChange={e => set('source', e.target.value)}><option value=""></option>{SOURCES.map(s => <option key={s}>{s}</option>)}</select></div>
@@ -131,6 +136,9 @@ function DealDetail({ deal, me, acts, tasks, docs, onClose, reload, move, archiv
   const dKps = docs.kps.filter(x => x.deal_name === deal.client_name)
   const dCon = docs.contracts.filter(x => x.deal_name === deal.client_name)
   const dPay = docs.payments.filter(x => x.deal_name === deal.client_name)
+  const paidSum = dPay.filter(p => (p.status || 'Оплачено') !== 'Ожидается' && (p.status || 'Оплачено') !== 'Просрочено').reduce((s, p) => s + (Number(p.amount) || 0), 0)
+  const dueTotal = Number(deal.amount) || 0
+  const expectedSum = Math.max(0, dueTotal - paidSum)
 
   async function addActivity() {
     const text = window.prompt && prompt('Что обсудили / результат?'); if (!text) return
@@ -148,16 +156,17 @@ function DealDetail({ deal, me, acts, tasks, docs, onClose, reload, move, archiv
     await supabase.from('contracts').insert({ client: deal.client_name, course_name: deal.course_name, amount: deal.amount, entity: deal.entity, deal_name: deal.client_name, chat_id: deal.chat_id || null, issue_date: today(), status: 'Подписан' })
     if (STAGE_IDX[deal.stage] < STAGE_IDX['contract']) await supabase.from('deals').update({ stage: 'contract', stage_at: new Date().toISOString() }).eq('id', deal.id); reload()
   }
-  async function addPayment() {
-    const amount = prompt('Сумма оплаты:', deal.amount || ''); if (!amount) return
-    await supabase.from('payments').insert({ client: deal.client_name, course_name: deal.course_name, amount: Number(amount), deal_name: deal.client_name, chat_id: deal.chat_id || null, pay_date: today(), method: 'Перечисление' })
-    if (STAGE_IDX[deal.stage] < STAGE_IDX['paid']) await supabase.from('deals').update({ stage: 'paid', stage_at: new Date().toISOString(), paid_at: new Date().toISOString() }).eq('id', deal.id); reload()
+  async function addPayment(expected) {
+    const label = expected ? 'Сумма к оплате (ожидается):' : 'Сумма полученной оплаты:'
+    const amount = prompt(label, deal.amount || ''); if (!amount) return
+    await supabase.from('payments').insert({ client: deal.client_name, course_name: deal.course_name, amount: Number(amount), deal_name: deal.client_name, chat_id: deal.chat_id || null, pay_date: today(), method: expected ? null : 'Перечисление', status: expected ? 'Ожидается' : 'Оплачено' })
+    if (!expected && STAGE_IDX[deal.stage] < STAGE_IDX['paid']) await supabase.from('deals').update({ stage: 'paid', stage_at: new Date().toISOString(), paid_at: new Date().toISOString() }).eq('id', deal.id); reload()
   }
 
   const docRows = []
   dKps.forEach(x => docRows.push(['КП ' + (x.number || ''), money(x.amount || 0) + (x.status ? ' · ' + x.status : '')]))
   dCon.forEach(x => docRows.push(['Договор ' + (x.number || ''), money(x.amount || 0) + (x.status ? ' · ' + x.status : '')]))
-  dPay.forEach(x => docRows.push(['Оплата ' + fdate(x.pay_date), money(x.amount || 0) + (x.method ? ' · ' + x.method : '')]))
+  dPay.forEach(x => docRows.push([(x.status === 'Ожидается' ? 'К оплате ' : 'Оплата ') + fdate(x.pay_date), money(x.amount || 0) + ' · ' + (x.status || 'Оплачено') + (x.method ? ' · ' + x.method : '')]))
 
   if (editing) return <DealForm me={me} deal={deal} onClose={() => setEditing(false)} onSaved={() => { setEditing(false); reload() }} />
 
@@ -172,7 +181,8 @@ function DealDetail({ deal, me, acts, tasks, docs, onClose, reload, move, archiv
             <button className="btn sm" onClick={addTask}>+ Задача</button>
             <button className="btn sm" onClick={addKp}>+ КП</button>
             <button className="btn sm" onClick={addContract}>+ Договор</button>
-            <button className="btn sm" onClick={addPayment}>+ Оплата</button>
+            <button className="btn sm" onClick={() => addPayment(true)}>+ К оплате</button>
+            <button className="btn sm" onClick={() => addPayment(false)}>+ Оплата получена</button>
             {deal.chat_id && <a className="btn sm" style={{ background: 'var(--s1)', color: '#fff', borderColor: 'transparent' }} href={'/feed?chat=' + encodeURIComponent(deal.chat_id)}>💬 Переписка</a>}
             <button className="btn sm" style={{ marginLeft: 'auto', borderColor: 'var(--bad)', color: 'var(--bad)' }} onClick={() => archive(deal)}>В архив</button>
           </div>
@@ -187,7 +197,9 @@ function DealDetail({ deal, me, acts, tasks, docs, onClose, reload, move, archiv
               <dt>Номер</dt><dd>{deal.phone || (deal.chat_id ? deal.chat_id : '—')}{deal.chat_id ? <> · <a href={'/feed?chat=' + encodeURIComponent(deal.chat_id)}>открыть чат</a></> : null}</dd>
               <dt>Курс</dt><dd>{deal.course_name || '—'}</dd>
               <dt>Слушателей</dt><dd>{deal.listeners || '—'}</dd>
-              <dt>Сумма</dt><dd>{deal.amount ? money(deal.amount) : '—'}</dd>
+              <dt>Сумма (к оплате)</dt><dd>{deal.amount ? money(deal.amount) : '—'}</dd>
+              <dt>Оплачено</dt><dd style={{ color: 'var(--good)' }}>{money(paidSum)}</dd>
+              <dt>Ожидается</dt><dd style={{ color: expectedSum > 0 ? 'var(--warn, #c97a12)' : 'var(--good)', fontWeight: 600 }}>{money(expectedSum)}{expectedSum > 0 ? ' — ждём оплату' : ' — закрыто'}</dd>
               <dt>Источник</dt><dd>{deal.source || '—'}</dd>
               <dt>Организация</dt><dd>{deal.entity || '—'}</dd>
               <dt>Ответственный</dt><dd>{deal.responsible || '—'}</dd>

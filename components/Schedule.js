@@ -79,7 +79,7 @@ function GroupModal({ group, onClose, onChanged }) {
                 <div key={m.id} className="mini-row" style={{ alignItems: 'center' }}>
                   <span style={{ flex: 1 }}><b>{m.name}</b>{m.phone ? ' · ' + m.phone : ''}</span>
                   {m.chat_id && <a className="btn sm" href={'/feed?chat=' + encodeURIComponent(m.chat_id)}>Чат</a>}
-                  <button className="btn sm" onClick={() => delMember(m)}>✕</button>
+                  <button className="btn sm" style={{ borderColor: 'var(--bad, #d14)', color: 'var(--bad, #d14)' }} title="Убрать ученика из группы" onClick={() => { if (confirm('Убрать «' + m.name + '» из группы?')) delMember(m) }}>Убрать</button>
                 </div>
               ))}
               <form className="mini-add" onSubmit={addMember} style={{ marginTop: 8 }}>

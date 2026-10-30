@@ -165,9 +165,9 @@ export default function Chats() {
     await supabase.from('contracts').insert({ number: cNum || null, client: cur.name, amount: cAmt ? Number(cAmt) : null, chat_id: cur.chat_id, deal_name: deal?.client_name || cur.name, status: 'Подписан' })
     setCNum(''); setCAmt(''); load()
   }
-  async function addPayment(e) {
-    e.preventDefault(); if (!cur || !pAmt) return
-    await supabase.from('payments').insert({ pay_date: new Date().toISOString().slice(0, 10), amount: Number(pAmt), client: cur.name, chat_id: cur.chat_id, deal_name: deal?.client_name || cur.name })
+  async function addPayment(expected) {
+    if (!cur || !pAmt) return
+    await supabase.from('payments').insert({ pay_date: new Date().toISOString().slice(0, 10), amount: Number(pAmt), client: cur.name, chat_id: cur.chat_id, deal_name: deal?.client_name || cur.name, method: expected ? null : 'Перечисление', status: expected ? 'Ожидается' : 'Оплачено' })
     setPAmt(''); load()
   }
 
@@ -268,12 +268,24 @@ export default function Chats() {
             {/* payments */}
             <div className="side-sec">
               <h4>Оплаты</h4>
+              {(() => {
+                const paid = curPayments.filter(p => (p.status || 'Оплачено') !== 'Ожидается' && (p.status || 'Оплачено') !== 'Просрочено').reduce((s, p) => s + (Number(p.amount) || 0), 0)
+                const due = Number(deal?.amount) || 0
+                const exp = Math.max(0, due - paid)
+                if (!due && curPayments.length === 0) return null
+                return <div className="mini-row" style={{ flexDirection: 'column', alignItems: 'stretch', gap: 2, fontSize: 12 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>К оплате</span><b>{money(due)}</b></div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--good)' }}><span>Оплачено</span><b>{money(paid)}</b></div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', color: exp > 0 ? '#c97a12' : 'var(--good)' }}><span>Ожидается</span><b>{money(exp)}</b></div>
+                </div>
+              })()}
               {curPayments.length === 0 && <div style={{ fontSize: 12.5, color: 'var(--faint)' }}>Нет оплат</div>}
-              {curPayments.map(p => <div key={p.id} className="mini-row"><span>{p.pay_date}</span><span>{money(p.amount)}</span></div>)}
-              <form className="mini-add" onSubmit={addPayment}>
-                <input className="input" placeholder="сумма оплаты" value={pAmt} onChange={e => setPAmt(e.target.value)} />
-                <button className="btn sm">+</button>
-              </form>
+              {curPayments.map(p => <div key={p.id} className="mini-row"><span>{p.pay_date} · {p.status || 'Оплачено'}</span><span>{money(p.amount)}</span></div>)}
+              <input className="input" placeholder="сумма" value={pAmt} onChange={e => setPAmt(e.target.value)} />
+              <div className="mini-add" style={{ marginTop: 4 }}>
+                <button className="btn sm" type="button" onClick={() => addPayment(true)}>+ К оплате</button>
+                <button className="btn primary sm" type="button" onClick={() => addPayment(false)}>+ Оплачено</button>
+              </div>
             </div>
             {/* tasks */}
             <div className="side-sec">
