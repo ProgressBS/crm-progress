@@ -1,6 +1,34 @@
-import { admin } from '@/lib/supabase/admin'
-
 export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+
+const SB_URL = (process.env.NEXT_PUBLIC_SUPABASE_URL || '').trim()
+const SB_KEY = (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '').replace(/[^\x20-\x7E]/g, '').trim()
+
+// Direct REST insert into messages with a hard timeout so the function never hangs.
+async function insertMessages(rows) {
+  const ctrl = new AbortController()
+  const t = setTimeout(() => ctrl.abort(), 7000)
+  try {
+    const res = await fetch(SB_URL + '/rest/v1/messages', {
+      method: 'POST',
+      headers: {
+        apikey: SB_KEY,
+        Authorization: 'Bearer ' + SB_KEY,
+        'Content-Type': 'application/json',
+        Prefer: 'resolution=merge-duplicates,return=minimal',
+      },
+      body: JSON.stringify(rows),
+      signal: ctrl.signal,
+      cache: 'no-store',
+    })
+    const text = await res.text()
+    return { status: res.status, ok: res.ok, body: text.slice(0, 300) }
+  } catch (e) {
+    return { status: 0, ok: false, body: String(e && e.message || e) }
+  } finally {
+    clearTimeout(t)
+  }
+}
 
 // Health check / Wazzup URL verification (GET)
 export async function GET() {
@@ -11,15 +39,9 @@ export async function GET() {
 export async function POST(req) {
   let body
   try { body = await req.json() } catch { return Response.json({ ok: true }) }
-
-  // Wazzup sends { test: true } when validating the webhook URL
   if (body && body.test === true) return Response.json({ ok: true })
 
-  const sb = admin()
   const messages = Array.isArray(body?.messages) ? body.messages : []
-  const statuses = Array.isArray(body?.statuses) ? body.statuses : []
-  const debug = []
-
   const rows = []
   for (const m of messages) {
     if (!m || !m.messageId) continue
@@ -34,22 +56,9 @@ export async function POST(req) {
       ts: m.dateTime || new Date().toISOString(),
     })
   }
-  // (client matching by phone is done later / by a DB trigger — kept out of the
-  // hot path so the webhook responds fast)
-  if (rows.length) {
-    try {
-      const { error } = await sb.from('messages').upsert(rows, { onConflict: 'wazzup_id' })
-      if (error) debug.push(error.message)
-    } catch (e) { debug.push(String(e && e.message || e)) }
-  }
 
-  // delivery/read status updates
-  for (const s of statuses) {
-    if (!s || !s.messageId) continue
-    try {
-      await sb.from('messages').update({ status: s.status }).eq('wazzup_id', s.messageId)
-    } catch (e) {}
-  }
+  let result = { skipped: true }
+  if (rows.length) result = await insertMessages(rows)
 
-  return Response.json({ ok: true, inserted: debug.length ? 0 : rows.length, errors: debug })
+  return Response.json({ ok: true, result })
 }
