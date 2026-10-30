@@ -162,3 +162,18 @@ tbody tr:hover{background:var(--surface-2)}
   .chat-wrap:not(.sel) .chat-main{display:none}
   .chat-list{width:100%}
 }
+
+/* chat number filter + badges + side sections */
+.chat-filter{display:flex;gap:4px;padding:8px 10px 0;flex-wrap:wrap}
+.chat-filter .seg{font-size:12px;padding:4px 10px;border:1px solid var(--border-strong);border-radius:20px;background:var(--surface);cursor:pointer;color:var(--muted);white-space:nowrap}
+.chat-filter .seg.on{background:var(--accent);border-color:var(--accent);color:var(--accent-fg)}
+.ci-badge{font-size:10px;font-weight:700;padding:1px 6px;border-radius:10px;background:var(--accent-weak);color:var(--accent);margin-left:6px;white-space:nowrap}
+.num-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px;vertical-align:middle}
+.chat-side-scroll{overflow-y:auto;flex:1}
+.side-sec{padding:10px 12px;border-bottom:1px solid var(--border)}
+.side-sec h4{font-size:12px;text-transform:uppercase;letter-spacing:.03em;color:var(--faint);margin:0 0 8px}
+.mini-row{display:flex;justify-content:space-between;gap:8px;font-size:13px;padding:5px 0;border-bottom:1px dashed var(--border)}
+.mini-row:last-child{border-bottom:none}
+.mini-add{display:flex;gap:5px;margin-top:6px}
+.mini-add .input{padding:6px 8px;font-size:12.5px}
+.deal-stage{display:inline-flex;align-items:center;font-size:12px;font-weight:600;padding:3px 8px;border-radius:20px;background:var(--surface-2);border:1px solid var(--border)}
