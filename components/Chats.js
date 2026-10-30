@@ -58,6 +58,10 @@ export default function Chats() {
     load()
     supabase.auth.getUser().then(({ data }) => setMe(data?.user?.user_metadata?.full_name || data?.user?.email || 'Сотрудник'))
     fetch('/api/wazzup/channels').then(r => r.json()).then(j => setChannels(j.channels || [])).catch(() => {})
+    try {
+      const want = new URLSearchParams(window.location.search).get('chat')
+      if (want) setSel(want)
+    } catch (e) {}
     const i = setInterval(load, 12000)
     return () => clearInterval(i)
   }, [])
