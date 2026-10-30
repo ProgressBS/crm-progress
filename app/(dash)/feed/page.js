@@ -1,2 +1,2 @@
-import Feed from '@/components/Feed'
-export default function Page(){return <Feed/>}
+import Chats from '@/components/Chats'
+export default function Page(){return <Chats/>}

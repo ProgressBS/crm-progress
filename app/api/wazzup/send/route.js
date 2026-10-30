@@ -24,12 +24,16 @@ async function logOutgoing(row) {
 export async function POST(req) {
   let p
   try { p = await req.json() } catch { return Response.json({ ok: false, error: 'bad body' }, { status: 400 }) }
-  const { chatId, channelId, text } = p || {}
-  if (!chatId || !channelId || !text) {
-    return Response.json({ ok: false, error: 'chatId, channelId и text обязательны' }, { status: 400 })
+  const { chatId, channelId, text, contentUri, fileName } = p || {}
+  if (!chatId || !channelId || (!text && !contentUri)) {
+    return Response.json({ ok: false, error: 'chatId, channelId и text/contentUri обязательны' }, { status: 400 })
   }
 
-  const r = await wz('/message', 'POST', { channelId, chatId, chatType: 'whatsapp', text })
+  const payload = { channelId, chatId, chatType: 'whatsapp' }
+  if (contentUri) payload.contentUri = contentUri
+  else payload.text = text
+
+  const r = await wz('/message', 'POST', payload)
   if (!r.ok) return Response.json({ ok: false, error: r.data, status: r.status }, { status: 400 })
 
   await logOutgoing({
@@ -37,7 +41,7 @@ export async function POST(req) {
     channel: channelId,
     chat_id: chatId,
     direction: 'out',
-    text,
+    text: contentUri || text,
     ts: new Date().toISOString(),
   })
 
