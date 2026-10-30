@@ -7,6 +7,7 @@ import { money, num, fdate } from '@/lib/format'
 const SOURCES = ['Звонок', 'WhatsApp', 'Сайт', 'Рекомендация', 'Тендер', 'Рассылка', 'Instagram', 'Другое']
 const ENT = ['ТОО «ПРОГРЕСС&CO»', 'ИП PROGRESS BUSINESS SCHOOL']
 const today = () => new Date().toISOString().slice(0, 10)
+const digits = s => String(s || '').replace(/\D/g, '')
 
 export default function DealsBoard() {
   const supabase = createClient()
@@ -90,10 +91,12 @@ function DealForm({ me, onClose, onSaved, deal }) {
   const set = (k, x) => setV(p => ({ ...p, [k]: x }))
   async function submit(e) {
     e.preventDefault(); if (!v.client_name) return
+    const phone = v.phone ? String(v.phone).trim() : null
     const payload = {
       client_name: v.client_name, course_name: v.course_name || null,
       listeners: v.listeners ? Number(v.listeners) : null, amount: v.amount ? Number(v.amount) : null,
       source: v.source || null, entity: v.entity || null, responsible: v.responsible || null, comment: v.comment || null,
+      phone, chat_id: phone ? digits(phone) : (v.chat_id || null),
     }
     if (deal && deal.id) await supabase.from('deals').update(payload).eq('id', deal.id)
     else await supabase.from('deals').insert({ ...payload, stage: 'call' })
@@ -105,6 +108,7 @@ function DealForm({ me, onClose, onSaved, deal }) {
         <div className="mh"><h3>{deal ? 'Сделка' : 'Новая сделка'}</h3><button type="button" className="x" onClick={onClose}>×</button></div>
         <div className="mb"><div className="form-grid">
           <div className="field full"><label>Клиент *</label><input value={v.client_name || ''} onChange={e => set('client_name', e.target.value)} /></div>
+          <div className="field full"><label>Номер WhatsApp / телефон <span style={{ color: 'var(--faint)', fontWeight: 400 }}>— свяжет переписку, договор и оплату</span></label><input placeholder="+7 7__ ___ __ __" value={v.phone || ''} onChange={e => set('phone', e.target.value)} /></div>
           <div className="field full"><label>Курс</label><input value={v.course_name || ''} onChange={e => set('course_name', e.target.value)} /></div>
           <div className="field"><label>Кол-во слушателей</label><input type="number" value={v.listeners || ''} onChange={e => set('listeners', e.target.value)} /></div>
           <div className="field"><label>Сумма (без НДС)</label><input type="number" value={v.amount || ''} onChange={e => set('amount', e.target.value)} /></div>
@@ -141,12 +145,12 @@ function DealDetail({ deal, me, acts, tasks, docs, onClose, reload, move, archiv
     if (STAGE_IDX[deal.stage] < STAGE_IDX['kp']) await supabase.from('deals').update({ stage: 'kp', stage_at: new Date().toISOString() }).eq('id', deal.id); reload()
   }
   async function addContract() {
-    await supabase.from('contracts').insert({ client: deal.client_name, course_name: deal.course_name, amount: deal.amount, entity: deal.entity, deal_name: deal.client_name, issue_date: today(), status: 'Подписан' })
+    await supabase.from('contracts').insert({ client: deal.client_name, course_name: deal.course_name, amount: deal.amount, entity: deal.entity, deal_name: deal.client_name, chat_id: deal.chat_id || null, issue_date: today(), status: 'Подписан' })
     if (STAGE_IDX[deal.stage] < STAGE_IDX['contract']) await supabase.from('deals').update({ stage: 'contract', stage_at: new Date().toISOString() }).eq('id', deal.id); reload()
   }
   async function addPayment() {
     const amount = prompt('Сумма оплаты:', deal.amount || ''); if (!amount) return
-    await supabase.from('payments').insert({ client: deal.client_name, course_name: deal.course_name, amount: Number(amount), deal_name: deal.client_name, pay_date: today(), method: 'Перечисление' })
+    await supabase.from('payments').insert({ client: deal.client_name, course_name: deal.course_name, amount: Number(amount), deal_name: deal.client_name, chat_id: deal.chat_id || null, pay_date: today(), method: 'Перечисление' })
     if (STAGE_IDX[deal.stage] < STAGE_IDX['paid']) await supabase.from('deals').update({ stage: 'paid', stage_at: new Date().toISOString(), paid_at: new Date().toISOString() }).eq('id', deal.id); reload()
   }
 
@@ -180,6 +184,7 @@ function DealDetail({ deal, me, acts, tasks, docs, onClose, reload, move, archiv
           </div>
           <div className="detail-sec"><h4>Данные</h4>
             <dl className="kv">
+              <dt>Номер</dt><dd>{deal.phone || (deal.chat_id ? deal.chat_id : '—')}{deal.chat_id ? <> · <a href={'/feed?chat=' + encodeURIComponent(deal.chat_id)}>открыть чат</a></> : null}</dd>
               <dt>Курс</dt><dd>{deal.course_name || '—'}</dd>
               <dt>Слушателей</dt><dd>{deal.listeners || '—'}</dd>
               <dt>Сумма</dt><dd>{deal.amount ? money(deal.amount) : '—'}</dd>
