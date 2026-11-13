@@ -15,7 +15,9 @@ export default function CrudView({ entity }) {
   const [confirm, setConfirm] = useState(null)
 
   async function load() {
-    const { data } = await supabase.from(cfg.table).select('*').order(cfg.order.col, { ascending: cfg.order.asc })
+    let q = supabase.from(cfg.table).select('*').order(cfg.order.col, { ascending: cfg.order.asc, nullsFirst: cfg.order.nullsFirst === true })
+    if (cfg.order.then) q = q.order(cfg.order.then.col, { ascending: cfg.order.then.asc, nullsFirst: cfg.order.then.nullsFirst === true })
+    const { data } = await q
     setRows(data || []); setLoading(false)
   }
   useEffect(() => { load() }, [entity])
