@@ -134,11 +134,13 @@ export default function Schedule() {
       const k = iso(d), inMonth = d.getMonth() === cursor.m
       const evs = dayMap[k] || []
       cells.push(
-        <div key={k} className={'cal-day' + (inMonth ? '' : ' other') + (k === todayK ? ' today' : '')}>
+        <div key={k} className={'cal-day' + (inMonth ? '' : ' other') + (k === todayK ? ' today' : '')}
+          style={{ cursor: 'pointer' }} title="Нажмите, чтобы добавить группу на этот день"
+          onClick={() => setEdit({ start_date: k })}>
           <div className="cal-num">{d.getDate()}</div>
           {evs.slice(0, 4).map((g, j) => (
             <div key={g.id + '_' + j} className="cal-ev" style={{ background: `var(${fmtColor(g.format)})` }}
-              title={g.course_name + (g.time_text ? ' · ' + g.time_text : '')} onClick={() => setEdit(g)}>{g.course_name}</div>
+              title={g.course_name + (g.time_text ? ' · ' + g.time_text : '')} onClick={(e) => { e.stopPropagation(); setEdit(g) }}>{g.course_name}</div>
           ))}
           {evs.length > 4 && <div className="cal-more">+{evs.length - 4}</div>}
         </div>
