@@ -12,8 +12,8 @@ export default async function Dashboard() {
   const revenue = (payments || []).filter(p => p.pay_date && new Date(p.pay_date) >= monthStart).reduce((a, p) => a + (Number(p.amount) || 0), 0)
   return (
     <div>
-      <h1 className="page-h">Дашборд</h1>
-      <div className="page-sub">PROGRESS BUSINESS SCHOOL</div>
+      <h1 className="page-h">Сегодня</h1>
+      <div className="page-sub">PROGRESS BUSINESS SCHOOL · сводка</div>
       <div className="tiles">
         <div className="tile"><div className="lab">Лиды</div><div className="val tnum">{leads}</div></div>
         <div className="tile"><div className="lab">В работе</div><div className="val tnum">{inwork}</div></div>

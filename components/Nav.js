@@ -3,27 +3,25 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 
+const I = {
+  home: 'M3 11.5 12 4l9 7.5M5 10v9h5v-5h4v5h5v-9',
+  chat: 'M4 5h16v11H8l-4 4V5z',
+  deals: 'M4 19V5m0 14h16M8 16V9m4 7V6m4 10v-4',
+  cal: 'M4 6h16v15H4V6zm0 5h16M8 3v4m8-4v4',
+  reg: 'M5 4h11l3 3v13H5V4zm2 6h8M7 14h8M7 18h5',
+  rep: 'M4 20h16M7 16V9m5 7V5m5 11v-8',
+}
+const Icon = ({ d }) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" width="19" height="19"><path d={d} /></svg>
+)
+
 const ITEMS = [
-  ['/', 'Дашборд'],
-  ['/feed', 'Заявки и чаты'],
-  ['/deals', 'Сделки'],
-  ['/clients', 'Клиенты'],
-  ['sep', 'Обучение'],
-  ['/schedule', 'Расписание'],
-  ['/courses', 'Курсы'],
-  ['/listeners', 'Слушатели'],
-  ['/teachers', 'Преподаватели'],
-  ['/candidates', 'Кандидаты'],
-  ['/certificates', 'Сертификаты'],
-  ['sep', 'Продажи'],
-  ['/tasks', 'Задачи'],
-  ['/kps', 'КП'],
-  ['/contracts', 'Договоры'],
-  ['/payments', 'Оплаты'],
-  ['/tenders', 'Тендеры'],
-  ['/reports', 'Отчёты'],
-  ['sep', 'Документы'],
-  ['/letters', 'Письма'],
+  ['/', 'Сегодня', I.home],
+  ['/feed', 'Клиенты и чаты', I.chat],
+  ['/deals', 'Сделки', I.deals],
+  ['/schedule', 'Расписание', I.cal],
+  ['/registry', 'Реестры', I.reg],
+  ['/reports', 'Отчёты', I.rep],
 ]
 
 export default function Nav({ name }) {
@@ -31,17 +29,22 @@ export default function Nav({ name }) {
   const router = useRouter()
   const supabase = createClient()
   async function signOut() { await supabase.auth.signOut(); router.push('/login'); router.refresh() }
+  const isActive = href => href === '/' ? path === '/' : path.startsWith(href)
   return (
     <nav className="sidebar">
       <div className="brand">
         <div className="logo">П</div>
-        <div><b>Прогресс</b><span>CRM школы</span></div>
+        <div><b>Прогресс</b><span>Бизнес-школа · CRM</span></div>
       </div>
-      {ITEMS.map(([href, label], i) => href === 'sep'
-        ? <div key={'s' + i} className="navsep">{label}</div>
-        : <Link key={href} href={href} className={'navlink' + (path === href ? ' active' : '')}>{label}</Link>)}
-      <div style={{ marginTop: 'auto', paddingTop: 12 }}>
-        <div style={{ fontSize: 12, color: 'var(--faint)', padding: '0 11px 8px', overflow: 'hidden', textOverflow: 'ellipsis' }}>{name}</div>
+      <div className="navlinks">
+        {ITEMS.map(([href, label, d]) => (
+          <Link key={href} href={href} className={'navlink' + (isActive(href) ? ' active' : '')}>
+            <Icon d={d} /><span>{label}</span>
+          </Link>
+        ))}
+      </div>
+      <div className="navfoot">
+        <div className="navuser" title={name}>{name}</div>
         <button className="btn sm" style={{ width: '100%', justifyContent: 'center' }} onClick={signOut}>Выйти</button>
       </div>
     </nav>
