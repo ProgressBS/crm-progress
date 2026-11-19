@@ -19,6 +19,18 @@ export default function DealsBoard() {
   const [me, setMe] = useState('')
   const [sel, setSel] = useState(null) // selected deal id
   const [adding, setAdding] = useState(false)
+  const [dragId, setDragId] = useState(null)
+  const [overCol, setOverCol] = useState(null)
+
+  async function drop(stage) {
+    const d = deals.find(x => x.id === dragId)
+    setDragId(null); setOverCol(null)
+    if (!d || d.stage === stage) return
+    setDeals(prev => prev.map(x => x.id === d.id ? { ...x, stage } : x)) // optimistic
+    const patch = { stage, stage_at: new Date().toISOString() }
+    if (stage === 'paid' && !d.paid_at) patch.paid_at = new Date().toISOString()
+    await supabase.from('deals').update(patch).eq('id', d.id)
+  }
 
   async function load() {
     const [d, a, t, k, c, p] = await Promise.all([
@@ -52,29 +64,42 @@ export default function DealsBoard() {
       <h1 className="page-h">Сделки</h1>
       <div className="page-sub">Воронка продаж — 8 стадий</div>
       <div className="toolbar"><button className="btn primary" onClick={() => setAdding(true)}>+ Сделка</button>
-        <span className="note-box" style={{ margin: 0, flex: 1 }}>Нажмите карточку, чтобы открыть сделку: сменить стадию, добавить звонок, задачу, КП, договор или оплату.</span></div>
+        <span className="note-box" style={{ margin: 0, flex: 1 }}>Перетаскивайте карточку между стадиями, чтобы менять статус. Клик по карточке — открыть сделку: звонок, задача, КП, договор, оплата.</span></div>
       {loading ? <div style={{ color: 'var(--muted)' }}>Загрузка…</div>
         : active.length === 0 ? <div className="empty">Сделок пока нет — создайте первую.</div>
           : <div className="board">
             {STAGES.map(s => {
               const inCol = active.filter(d => d.stage === s.id)
-              return <div key={s.id} className="col">
-                <h3><span>{s.name}</span><span style={{ color: 'var(--muted)' }}>{inCol.length}</span></h3>
-                {inCol.map(d => (
-                  <div key={d.id} className="card" style={{ borderLeftColor: `var(${s.v})` }} onClick={() => setSel(d.id)}>
-                    <div style={{ fontWeight: 600, marginBottom: 3 }}>{d.client_name}</div>
-                    {d.course_name && <div style={{ color: 'var(--muted)', fontSize: 12 }}>{d.course_name}</div>}
-                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'center', marginTop: 4 }}>
-                      <b style={{ fontSize: 13 }}>{d.amount ? money(d.amount) : '—'}</b>
-                      {d.listeners ? <span style={{ fontSize: 11.5, color: 'var(--faint)' }}>{num(d.listeners)} чел.</span> : null}
+              const sum = inCol.reduce((a, d) => a + (Number(d.amount) || 0), 0)
+              return <div key={s.id} className={'col' + (overCol === s.id ? ' over' : '')}
+                onDragOver={e => { e.preventDefault(); if (overCol !== s.id) setOverCol(s.id) }}
+                onDragLeave={e => { if (e.currentTarget === e.target) setOverCol(null) }}
+                onDrop={() => drop(s.id)}>
+                <h3 style={{ borderTop: `3px solid var(${s.v})` }}>
+                  <span>{s.name}</span><span className="col-cnt">{inCol.length}</span>
+                  <span className="col-sum">{sum ? money(sum) : ''}</span>
+                </h3>
+                <div className="col-body">
+                  {inCol.map(d => (
+                    <div key={d.id} className={'card' + (dragId === d.id ? ' dragging' : '')} draggable
+                      style={{ borderLeftColor: `var(${s.v})` }}
+                      onDragStart={() => setDragId(d.id)} onDragEnd={() => { setDragId(null); setOverCol(null) }}
+                      onClick={() => setSel(d.id)}>
+                      <div style={{ fontWeight: 600, marginBottom: 3 }}>{d.client_name}</div>
+                      {d.course_name && <div style={{ color: 'var(--muted)', fontSize: 12.5 }}>{d.course_name}</div>}
+                      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'center', marginTop: 5 }}>
+                        <b style={{ fontSize: 14 }}>{d.amount ? money(d.amount) : '—'}</b>
+                        {d.listeners ? <span style={{ fontSize: 11.5, color: 'var(--faint)' }}>{num(d.listeners)} чел.</span> : null}
+                      </div>
+                      <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', marginTop: 7 }}>
+                        {d.entity && <span className="chip">{d.entity.indexOf('ТОО') >= 0 ? 'ТОО' : 'ИП'}</span>}
+                        {d.source && <span className="chip">{d.source}</span>}
+                        {d.responsible && <span className="chip accent">{d.responsible}</span>}
+                      </div>
                     </div>
-                    <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', marginTop: 7 }}>
-                      {d.entity && <span className="chip">{d.entity.indexOf('ТОО') >= 0 ? 'ТОО' : 'ИП'}</span>}
-                      {d.source && <span className="chip">{d.source}</span>}
-                      {d.responsible && <span className="chip accent">{d.responsible}</span>}
-                    </div>
-                  </div>
-                ))}
+                  ))}
+                  {inCol.length === 0 && <div className="col-drop">перетащите сюда</div>}
+                </div>
               </div>
             })}
           </div>}
